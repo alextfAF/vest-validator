@@ -14,6 +14,8 @@ npx cap sync
 <docgen-index>
 
 * [`echo(...)`](#echo)
+* [`checkHasVest(...)`](#checkhasvest)
+* [Interfaces](#interfaces)
 
 </docgen-index>
 
@@ -33,5 +35,31 @@ echo(options: { value: string; }) => Promise<{ value: string; }>
 **Returns:** <code>Promise&lt;{ value: string; }&gt;</code>
 
 --------------------
+
+
+### checkHasVest(...)
+
+```typescript
+checkHasVest(options: HasVestOptions) => Promise<{ hasVest: boolean; }>
+```
+
+| Param         | Type                                                      |
+| ------------- | --------------------------------------------------------- |
+| **`options`** | <code><a href="#hasvestoptions">HasVestOptions</a></code> |
+
+**Returns:** <code>Promise&lt;{ hasVest: boolean; }&gt;</code>
+
+--------------------
+
+
+### Interfaces
+
+
+#### HasVestOptions
+
+| Prop           | Type                 |
+| -------------- | -------------------- |
+| **`image`**    | <code>string</code>  |
+| **`showLogs`** | <code>boolean</code> |
 
 </docgen-api>

@@ -10,7 +10,8 @@ public class vestvalidatorPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "vestvalidatorPlugin"
     public let jsName = "vestvalidator"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "echo", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "echo", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "checkHasVest", returnType: CAPPluginReturnPromise)
     ]
     private let implementation = vestvalidator()
 
@@ -19,5 +20,15 @@ public class vestvalidatorPlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve([
             "value": implementation.echo(value)
         ])
+    }
+
+    @objc func checkHasVest(_ call: CAPPluginCall) {
+        guard let imageBase64 = call.getString("image") else {
+            call.reject("Missing required parameters: image (base64)")
+            return
+        }
+        let isShowLogs = call.getBool("showLogs") ?? false
+        let hasVest = implementation.checkHasVest(imageBase64: imageBase64, showLogs: isShowLogs)
+        call.resolve(["hasVest": hasVest])
     }
 }

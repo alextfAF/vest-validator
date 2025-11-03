@@ -19,7 +19,10 @@ let package = Package(
                 .product(name: "Capacitor", package: "capacitor-swift-pm"),
                 .product(name: "Cordova", package: "capacitor-swift-pm")
             ],
-            path: "ios/Sources/vestvalidatorPlugin"),
+            path: "ios/Sources/vestvalidatorPlugin",
+            resources: [
+                .process("Resources")
+            ]),
         .testTarget(
             name: "vestvalidatorPluginTests",
             dependencies: ["vestvalidatorPlugin"],

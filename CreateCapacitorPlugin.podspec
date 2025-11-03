@@ -14,4 +14,9 @@ Pod::Spec.new do |s|
   s.ios.deployment_target = '14.0'
   s.dependency 'Capacitor'
   s.swift_version = '5.1'
+  # TensorFlow Lite for Swift runtime; include SelectTfOps if your model uses Flex ops
+  s.dependency 'TensorFlowLiteSwift', '~> 2.13.0'
+  s.dependency 'TensorFlowLiteSelectTfOps', '~> 2.13.0'
+  # Ensure model resources are bundled into the app when using CocoaPods
+  s.resources = 'ios/Sources/vestvalidatorPlugin/Resources/**/*'
 end
