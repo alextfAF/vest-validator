@@ -63,3 +63,4 @@ checkHasVest(options: HasVestOptions) => Promise<{ hasVest: boolean; }>
 | **`showLogs`** | <code>boolean</code> |
 
 </docgen-api>
+# vest-validator
