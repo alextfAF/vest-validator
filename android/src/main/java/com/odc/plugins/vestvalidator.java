@@ -2,7 +2,6 @@ package com.odc.plugins;
 
 import com.getcapacitor.Logger;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import org.tensorflow.lite.Interpreter;
@@ -11,7 +10,6 @@ import org.tensorflow.lite.support.image.TensorImage;
 import org.tensorflow.lite.support.image.ImageProcessor;
 import org.tensorflow.lite.support.image.ops.ResizeOp;
 import org.tensorflow.lite.support.common.ops.NormalizeOp;
-import org.tensorflow.lite.support.tensorbuffer.TensorBuffer;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -20,7 +18,8 @@ import java.nio.channels.FileChannel;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-import android.util.Base64;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 // Core implementation that holds the TFLite Interpreter and runs inference.
 public class vestvalidator {
@@ -107,16 +106,97 @@ public class vestvalidator {
         }
     }
 
-    // Overload that accepts the image as a base64 string; decodes to Bitmap and delegates.
+    // Overload that accepts the image as a base64 STRING and feeds it directly to the model.
     public boolean checkHasVest(String imageString, boolean showLogs) {
         try {
-            byte[] decoded = Base64.decode(imageString, Base64.DEFAULT);
-            Bitmap bitmap = BitmapFactory.decodeByteArray(decoded, 0, decoded.length);
-            return checkHasVest(bitmap, showLogs);
+            if (tflite == null) {
+                MappedByteBuffer model = loadModel("model.tflite");
+                tflite = new Interpreter(model, new Interpreter.Options());
+            }
+
+            int[] inShape = tflite.getInputTensor(0).shape();
+            DataType inType = tflite.getInputTensor(0).dataType();
+
+            if (inType != DataType.STRING) {
+                Logger.error("checkHasVest", "Model input[0] is not STRING; got " + inType, null);
+                return false;
+            }
+
+            int elements = 1;
+            for (int d : inShape) { elements *= d; }
+            if (elements < 1) { elements = 1; }
+
+            String[] strings = new String[elements];
+            Arrays.fill(strings, imageString);
+
+            ByteBuffer inputBuffer = encodeTfLiteStringTensor(strings);
+
+            // Prepare output buffer for first output tensor (same as bitmap path)
+            int[] outShape = tflite.getOutputTensor(0).shape();
+            int outElements = 1; for (int d : outShape) outElements *= d;
+            DataType outType = tflite.getOutputTensor(0).dataType();
+
+            ByteBuffer outBuffer;
+            if (outType == DataType.FLOAT32) {
+                outBuffer = ByteBuffer.allocateDirect(outElements * 4).order(ByteOrder.nativeOrder());
+            } else if (outType == DataType.UINT8 || outType == DataType.BOOL) {
+                outBuffer = ByteBuffer.allocateDirect(outElements).order(ByteOrder.nativeOrder());
+            } else {
+                Logger.error("checkHasVest", "Unsupported output dtype: " + outType, null);
+                return false;
+            }
+
+            // Run inference with STRING input buffer
+            tflite.run(inputBuffer, outBuffer);
+
+            boolean hasVest;
+            outBuffer.rewind();
+            if (outType == DataType.FLOAT32) {
+                FloatBuffer fb = outBuffer.asFloatBuffer();
+                float v = fb.get(0);
+                hasVest = v > 0.5f;
+            } else if (outType == DataType.UINT8) {
+                int v = outBuffer.get(0) & 0xFF;
+                hasVest = v > 127;
+            } else { // BOOL
+                hasVest = (outBuffer.get(0) != 0);
+            }
+
+            if (showLogs) {
+                Logger.info("checkHasVest", "STRING input length=" + (imageString != null ? imageString.length() : 0) + ", result=" + hasVest);
+            }
+            return hasVest;
         } catch (Exception e) {
-            Logger.error("TFLite inference failed (string->bitmap)", e.getMessage(), e);
+            Logger.error("TFLite inference failed (string)", e.getMessage(), e);
             return false;
         }
+    }
+
+    // Encode a string tensor for TFLite: header of N int32 offsets, then for each string
+    // an int32 length followed by the UTF-8 bytes. Offsets are from the start of the buffer.
+    private static ByteBuffer encodeTfLiteStringTensor(String[] strings) {
+        if (strings == null) strings = new String[] { "" };
+        int n = strings.length;
+        byte[][] bytes = new byte[n][];
+        int payloadBytes = 0;
+        for (int i = 0; i < n; i++) {
+            bytes[i] = strings[i] != null ? strings[i].getBytes(StandardCharsets.UTF_8) : new byte[0];
+            payloadBytes += 4 + bytes[i].length; // 4 for length prefix
+        }
+        int headerBytes = n * 4; // int32 offsets
+        ByteBuffer buffer = ByteBuffer.allocateDirect(headerBytes + payloadBytes).order(ByteOrder.nativeOrder());
+        int offset = headerBytes;
+        for (int i = 0; i < n; i++) {
+            // write offset for string i at header position
+            buffer.putInt(i * 4, offset);
+            // write length and bytes at current offset
+            buffer.position(offset);
+            buffer.putInt(bytes[i].length);
+            buffer.put(bytes[i]);
+            offset += 4 + bytes[i].length;
+        }
+        buffer.position(0);
+        return buffer;
     }
 
     // Resize and normalize the Bitmap according to input[0] tensor shape and dtype.
