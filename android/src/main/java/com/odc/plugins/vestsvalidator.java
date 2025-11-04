@@ -15,14 +15,14 @@ import java.nio.channels.FileChannel;
 import java.util.Arrays;
 
 // Core implementation that holds the TFLite Interpreter and runs inference.
-public class vestvalidator {
+public class vestsvalidator {
     // Application Context used to access assets (model.tflite) safely.
     private final Context context;
     // Lazily-initialized TensorFlow Lite interpreter (created once and reused).
     private Interpreter tflite;
 
     // Store application Context to avoid leaking an Activity.
-    public vestvalidator(Context context) {
+    public vestsvalidator(Context context) {
         this.context = context.getApplicationContext();
     }
 
@@ -78,7 +78,6 @@ public class vestvalidator {
             }
 
             ByteBuffer outBuffer = ByteBuffer.allocateDirect(outElements).order(ByteOrder.nativeOrder());
-            tflite.outputTensor(0); // ensure tensor is prepared
             tflite.run(inputBuffer, outBuffer);
 
             outBuffer.rewind();
@@ -109,9 +108,9 @@ public class vestvalidator {
         ByteBuffer buf = ByteBuffer.allocateDirect(header + payload).order(ByteOrder.nativeOrder());
         int offset = header;
         for (int i = 0; i < n; i++) {
-            buf.putInt(offset);        // write offset for this string
-            buf.position(offset);
+            buf.putInt(offset);       // write offset for this string
             int len = data[i].length;
+            buf.position(offset);
             buf.putInt(len);
             if (len > 0) {
                 buf.put(data[i]);
