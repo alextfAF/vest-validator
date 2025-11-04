@@ -2,6 +2,7 @@ package com.odc.plugins;
 
 import com.getcapacitor.Logger;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import org.tensorflow.lite.Interpreter;
@@ -19,6 +20,7 @@ import java.nio.channels.FileChannel;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import android.util.Base64;
 
 // Core implementation that holds the TFLite Interpreter and runs inference.
 public class vestvalidator {
@@ -51,7 +53,7 @@ public class vestvalidator {
         return mapped;
     }
 
-    /*public boolean checkHasVest(Bitmap imageBitmap, boolean showLogs) {
+    public boolean checkHasVest(Bitmap imageBitmap, boolean showLogs) {
         try {
             // Lazy init: create the interpreter on first use and keep it for reuse.
             if (tflite == null) {
@@ -103,65 +105,16 @@ public class vestvalidator {
             Logger.error("TFLite inference failed", e.getMessage(), e);
             return false;
         }
-    }*/
+    }
 
-    // Overload that accepts the image as a base64/string as required by the model.
+    // Overload that accepts the image as a base64 string; decodes to Bitmap and delegates.
     public boolean checkHasVest(String imageString, boolean showLogs) {
         try {
-            if (tflite == null) {
-                MappedByteBuffer model = loadModel("model.tflite");
-                tflite = new Interpreter(model, new Interpreter.Options());
-            }
-
-            int[] inShape = tflite.getInputTensor(0).shape();
-            DataType inType = tflite.getInputTensor(0).dataType();
-
-            if (inType != DataType.STRING) {
-                Logger.error("checkHasVest", "Model input[0] is not STRING; got " + inType);
-                return false;
-            }
-
-            // Build a STRING tensor with a single element containing the image string
-            TensorBuffer input = TensorBuffer.createFixedSize(inShape, DataType.STRING);
-            input.loadArray(new String[] { imageString }, inShape);
-
-            // Prepare output buffer for first output tensor (same as bitmap path)
-            int[] outShape = tflite.getOutputTensor(0).shape();
-            int elements = 1; for (int d : outShape) elements *= d;
-            DataType outType = tflite.getOutputTensor(0).dataType();
-
-            ByteBuffer outBuffer;
-            if (outType == DataType.FLOAT32) {
-                outBuffer = ByteBuffer.allocateDirect(elements * 4).order(ByteOrder.nativeOrder());
-            } else if (outType == DataType.UINT8 || outType == DataType.BOOL) {
-                outBuffer = ByteBuffer.allocateDirect(elements).order(ByteOrder.nativeOrder());
-            } else {
-                Logger.error("checkHasVest", "Unsupported output dtype: " + outType);
-                return false;
-            }
-
-            // Run inference with STRING input buffer
-            tflite.run(input.getBuffer(), outBuffer);
-
-            boolean hasVest;
-            outBuffer.rewind();
-            if (outType == DataType.FLOAT32) {
-                FloatBuffer fb = outBuffer.asFloatBuffer();
-                float v = fb.get(0);
-                hasVest = v > 0.5f;
-            } else if (outType == DataType.UINT8) {
-                int v = outBuffer.get(0) & 0xFF;
-                hasVest = v > 127;
-            } else { // BOOL
-                hasVest = (outBuffer.get(0) != 0);
-            }
-
-            if (showLogs) {
-                Logger.info("checkHasVest", "STRING input length=" + (imageString != null ? imageString.length() : 0) + ", result=" + hasVest);
-            }
-            return hasVest;
+            byte[] decoded = Base64.decode(imageString, Base64.DEFAULT);
+            Bitmap bitmap = BitmapFactory.decodeByteArray(decoded, 0, decoded.length);
+            return checkHasVest(bitmap, showLogs);
         } catch (Exception e) {
-            Logger.error("TFLite inference failed (string)", e.getMessage(), e);
+            Logger.error("TFLite inference failed (string->bitmap)", e.getMessage(), e);
             return false;
         }
     }
