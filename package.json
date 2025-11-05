@@ -1,5 +1,5 @@
 {
-  "name": "create-capacitor-plugin",
+  "name": "vest-validator"",
   "version": "0.0.1",
   "description": "validate if a person in a selfie has a vest",
   "main": "dist/plugin.cjs.js",
@@ -75,6 +75,8 @@
     },
     "android": {
       "src": "android"
-    }
+    },
+    "pluginId": "com.odc.plugins.vestvalidator",
+    "className": "vestvalidator"
   }
 }
