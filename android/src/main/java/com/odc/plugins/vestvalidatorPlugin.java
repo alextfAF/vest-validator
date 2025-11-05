@@ -54,7 +54,7 @@ public class vestvalidatorPlugin extends Plugin {
             call.resolve(ret);
         } catch (Exception e) {
             // Surface any decode/inference errors back to JS with logs.
-            Logger.error("vestvalidator.checkHasVest error", e.getMessage(), e);
+            Logger.error("vestvalidator.checkHasVest error", e);
             call.reject("Failed to process image: " + e.getMessage());
         }
     }

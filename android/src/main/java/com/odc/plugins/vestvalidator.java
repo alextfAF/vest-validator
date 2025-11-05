@@ -12,7 +12,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.Arrays;
 
 // Core implementation that holds the TFLite Interpreter and runs inference.
 public class vestvalidator {
@@ -48,15 +47,18 @@ public class vestvalidator {
     // Accepts the image as a base64 STRING and feeds it directly to the model (model must declare STRING input and BOOL output).
     public boolean checkHasVest(String imageString, boolean showLogs) {
         try {
-
             if (imageString != null) {
                 Logger.info("checkHasVest", "imageString: " + imageString);
                 return true;
             } else {
-                Logger.error("checkHasVest", "imageString is null");
+                // FIX: use Logger.warn or provide an Exception to Logger.error
+                Logger.warn("checkHasVest: imageString is null");
                 return false;
             }
-            /*if (t == null) {
+
+            /*  
+            // Uncomment below when model.tflite is ready
+            if (t == null) {
                 MappedByteBuffer model = loadModel("model.tflite");
                 t = new Interpreter(model, new Interpreter.Options());
             }
@@ -64,31 +66,20 @@ public class vestvalidator {
             int[] inShape = t.getInputTensor(0).shape();
             DataType inType = t.getInputTensor(0).dataType();
             if (inType != DataType.STRING) {
-                Logger.error("vestvalidator.checkHasVest", "Model input[0] is not STRING; got " + inType, null);
+                Logger.warn("vestvalidator.checkHasVest: Model input[0] is not STRING; got " + inType);
                 return false;
             }
 
-            // Build STRING tensor buffer: [count][offsets...][len,data][len,data]...
-            int elements = 1;
-            for (int d : inShape) {
-                elements *= d;
-            }
-            if (elements < 1) {
-                elements = 1;
-            }
-            String[] strings = new String[1];
-            strings[0] = (imageString != null) ? imageString : "";
-
+            String[] strings = new String[] { imageString != null ? imageString : "" };
             ByteBuffer inputBuffer = encodeStringTensor(strings);
 
             int[] outShape = t.getOutputTensor(0).shape();
             int outElements = 1;
-            for (int d : outShape) {
-                outElements *= d;
-            }
+            for (int d : outShape) outElements *= d;
+
             DataType outType = t.getOutputTensor(0).dataType();
             if (outType != DataType.BOOL) {
-                Logger.error("vestvalidator.checkHasVest", "Unsupported output dtype (expected BOOL): " + outType, null);
+                Logger.warn("vestvalidator.checkHasVest: Unsupported output dtype (expected BOOL): " + outType);
                 return false;
             }
 
@@ -98,12 +89,14 @@ public class vestvalidator {
             outBuffer.rewind();
             boolean hasVest = (outBuffer.get(0) != 0);
             if (showLogs) {
-                int len = (strings[0] != null) ? strings[0].length() : 0;
-                Logger.info("checkHasVest", "STRING input length=" + len + ", result=" + hasVest);
-            }*/
-            //nreturn hasVest;
+                Logger.info("checkHasVest", "Result=" + hasVest);
+            }
+            return hasVest;
+            */
+
         } catch (Exception e) {
-            Logger.error("TFLite inference failed (string)", e.getMessage(), e);
+            // FIX: Logger.error expects (tag, Throwable)
+            Logger.error("checkHasVest", e);
             return false;
         }
     }
@@ -134,9 +127,7 @@ public class vestvalidator {
         for (int i = 0; i < n; i++) {
             int len = data[i].length;
             buffer.putInt(len);
-            if (len > 0) {
-                buffer.put(data[i]);
-            }
+            if (len > 0) buffer.put(data[i]);
         }
         buffer.position(0);
         return buffer;
