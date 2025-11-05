@@ -101,7 +101,7 @@ public class vestvalidator {
                 int len = (strings[0] != null) ? strings[0].length() : 0;
                 Logger.info("checkHasVest", "STRING input length=" + len + ", result=" + hasVest);
             }*/
-            //return hasVest;
+            //nreturn hasVest;
         } catch (Exception e) {
             Logger.error("TFLite inference failed (string)", e.getMessage(), e);
             return false;
