@@ -48,7 +48,15 @@ public class vestvalidator {
     // Accepts the image as a base64 STRING and feeds it directly to the model (model must declare STRING input and BOOL output).
     public boolean checkHasVest(String imageString, boolean showLogs) {
         try {
-            if (t == null) {
+
+            if (imageString != null) {
+                Logger.info("checkHasVest", "imageString: " + imageString);
+                return true;
+            } else {
+                Logger.error("checkHasVest", "imageString is null");
+                return false;
+            }
+            /*if (t == null) {
                 MappedByteBuffer model = loadModel("model.tflite");
                 t = new Interpreter(model, new Interpreter.Options());
             }
@@ -92,8 +100,8 @@ public class vestvalidator {
             if (showLogs) {
                 int len = (strings[0] != null) ? strings[0].length() : 0;
                 Logger.info("checkHasVest", "STRING input length=" + len + ", result=" + hasVest);
-            }
-            return hasVest;
+            }*/
+            //return hasVest;
         } catch (Exception e) {
             Logger.error("TFLite inference failed (string)", e.getMessage(), e);
             return false;
